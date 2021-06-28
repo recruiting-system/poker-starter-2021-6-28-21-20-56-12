@@ -1,0 +1,38 @@
+apply plugin: 'checkstyle'
+
+checkstyle {
+    // The version of the code quality tool to be used.
+    // The most recent version of Checkstyle can be found at https://github.com/checkstyle/checkstyle/releases
+    toolVersion = "8.8"
+
+    // The source sets to be analyzed as part of the check and build tasks.
+    // Use 'sourceSets = []' to remove Checkstyle from the check and build tasks.
+//    sourceSets = [project.sourceSets.main, project.sourceSets.test]
+
+    // Whether or not to allow the build to continue if there are warnings.
+    ignoreFailures = false
+
+    // Whether or not rule violations are to be displayed on the console.
+    showViolations = true
+}
+
+tasks.withType(Checkstyle).each { checkstyleTask ->
+    checkstyleTask.doLast {
+        reports.all { report ->
+            def outputFile = report.destination
+            if (outputFile.exists() && outputFile.text.contains("<error ")) {
+                throw new GradleException("There were checkstyle warnings! For more info check $outputFile")
+            }
+        }
+    }
+}
+
+task installGitHooks(type: Copy) { //将pre-commit拷贝到指定位置
+    from new File(rootProject.rootDir, 'config/checkstyle/pre-commit')
+    into {
+        new File(rootProject.rootDir, '.git/hooks')
+    }
+    fileMode 0755
+}
+
+build.dependsOn installGitHooks
